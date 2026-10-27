@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My List Maker</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px 16px;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #1e293b;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 28px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px #0000000d;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 25px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 22px 0;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 4px;
+      border-bottom: 1px solid #e2e8f0;
+      overflow-wrap: anywhere;
+    }
+
+    li input {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+
+    li span {
+      flex: 1;
+    }
+
+    li.done span {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .delete {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 7px 10px;
+    }
+
+    .delete:hover {
+      background: #fecaca;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      flex: 1;
+    }
+
+    .clear {
+      background: #475569;
+    }
+
+    #emptyMessage {
+      text-align: center;
+      color: #94a3b8;
+      padding: 15px 0;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .container {
+        max-width: none;
+        margin: 0;
+        padding: 10px;
+        box-shadow: none;
+      }
+
+      .no-print,
+      .delete,
+      #emptyMessage {
+        display: none !important;
+      }
+
+      li {
+        break-inside: avoid;
+        border-bottom: 1px solid #ddd;
+      }
+
+      li input[type="checkbox"] {
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border: 1px solid black;
+        border-radius: 2px;
+      }
+
+      h1 {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>My List Maker</h1>
+    <p class="subtitle">Create your list and print it anytime.</p>
+
+    <form id="itemForm" class="input-row no-print">
+      <input
+        type="text"
+        id="itemInput"
+        placeholder="Enter an item..."
+        maxlength="300"
+        required
+      >
+      <button type="submit">Add Item</button>
+    </form>
+
+    <p id="emptyMessage">Your list is empty. Add your first item!</p>
+    <ul id="itemList"></ul>
+
+    <div class="actions no-print">
+      <button type="button" onclick="window.print()">
+        Print List
+      </button>
+      <button type="button" class="clear" id="clearButton">
+        Clear All
+      </button>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById("itemForm");
+    const input = document.getElementById("itemInput");
+    const list = document.getElementById("itemList");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const clearButton = document.getElementById("clearButton");
+
+    let items = [];
+
+    try {
+      items = JSON.parse(
+        localStorage.getItem("my-list-items") || "[]"
+      );
+
+      if (!Array.isArray(items)) items = [];
+    } catch {
+      items = [];
+    }
+
+    function saveItems() {
+      try {
+        localStorage.setItem(
+          "my-list-items",
+          JSON.stringify(items)
+        );
+      } catch {
+        // The list remains usable if browser storage is unavailable.
+      }
+    }
+
+    function renderList() {
+      list.replaceChildren();
+      emptyMessage.style.display =
+        items.length === 0 ? "block" : "none";
+
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        if (item.done) li.classList.add("done");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = item.done;
+        checkbox.setAttribute(
+          "aria-label",
+          "Mark " + item.text + " complete"
+        );
+
+        checkbox.addEventListener("change", () => {
+          items[index].done = checkbox.checked;
+          saveItems();
+          renderList();
+        });
+
+        const span = document.createElement("span");
+        span.textContent = item.text;
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "delete no-print";
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("aria-label", "Delete " + item.text);
+
+        deleteButton.addEventListener("click", () => {
+          items.splice(index, 1);
+          saveItems();
+          renderList();
+        });
+
+        li.append(checkbox, span, deleteButton);
+        list.appendChild(li);
+      });
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      items.push({ text, done: false });
+      saveItems();
+      renderList();
+
+      input.value = "";
+      input.focus();
+    });
+
+    clearButton.addEventListener("click", () => {
+      if (items.length === 0) return;
+
+      if (confirm("Are you sure you want to clear the entire list?")) {
+        items = [];
+        saveItems();
+        renderList();
+      }
+    });
+
+    renderList();
+  </script>
+</body>
+</html>
